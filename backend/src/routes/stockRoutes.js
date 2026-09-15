@@ -1,9 +1,1 @@
-const express = require("express");
-const router = express.Router();
-
-const controller = require("../controllers/stockController");
-
-router.get("/movements", controller.getMovements);
-router.post("/movement", controller.addStockMovement);
-
-module.exports = router;
+import{Router}from"express";import{auth}from"../middleware/authMiddleware.js";import*as c from"../controllers/stockController.js";const r=Router();r.use(auth);r.get("/",c.movements);r.post("/",c.addMovement);export default r;

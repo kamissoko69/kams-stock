@@ -1,9 +1,1 @@
-const express = require("express");
-const router = express.Router();
-
-const controller = require("../controllers/categoryController");
-
-router.get("/", controller.getCategories);
-router.post("/", controller.createCategory);
-
-module.exports = router;
+import{Router}from"express";import{auth,allow}from"../middleware/authMiddleware.js";import*as c from"../controllers/categoryController.js";const r=Router();r.use(auth);r.get("/",c.listCategories);r.post("/",allow("ADMIN","MANAGER"),c.createCategory);r.put("/:id",allow("ADMIN","MANAGER"),c.updateCategory);r.delete("/:id",allow("ADMIN"),c.deleteCategory);export default r;

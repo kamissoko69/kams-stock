@@ -1,77 +1,13 @@
-CREATE TABLE IF NOT EXISTS categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS products (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    category_id INT REFERENCES categories(id) ON DELETE SET NULL,
-    cost_price DECIMAL(12,2) NOT NULL CHECK (cost_price >= 0),
-    selling_price DECIMAL(12,2) NOT NULL CHECK (selling_price >= 0),
-    quantity INT NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-    min_stock_alert INT NOT NULL DEFAULT 5 CHECK (min_stock_alert >= 0),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS stock_movements (
-    id SERIAL PRIMARY KEY,
-    product_id INT REFERENCES products(id) ON DELETE CASCADE,
-    type VARCHAR(10) NOT NULL CHECK (type IN ('IN', 'OUT')),
-    quantity INT NOT NULL CHECK (quantity > 0),
-    reason TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS sales (
-    id SERIAL PRIMARY KEY,
-    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-    profit DECIMAL(12,2) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS sale_items (
-    id SERIAL PRIMARY KEY,
-    sale_id INT REFERENCES sales(id) ON DELETE CASCADE,
-    product_id INT REFERENCES products(id) ON DELETE CASCADE,
-    quantity INT NOT NULL CHECK (quantity > 0),
-    unit_price DECIMAL(12,2) NOT NULL,
-    subtotal DECIMAL(12,2) NOT NULL
-);
-
-INSERT INTO categories (name)
-VALUES
-    ('Électronique'),
-    ('Alimentation'),
-    ('Vêtements')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO products
-(name, category_id, cost_price, selling_price, quantity, min_stock_alert)
-SELECT 'Téléphone Smartphone',
-       id,
-       50000,
-       75000,
-       10,
-       3
-FROM categories
-WHERE name = 'Électronique'
-AND NOT EXISTS (
-    SELECT 1 FROM products WHERE name = 'Téléphone Smartphone'
-);
-
-INSERT INTO products
-(name, category_id, cost_price, selling_price, quantity, min_stock_alert)
-SELECT 'Sac de Riz 25kg',
-       id,
-       12000,
-       15000,
-       2,
-       5
-FROM categories
-WHERE name = 'Alimentation'
-AND NOT EXISTS (
-    SELECT 1 FROM products WHERE name = 'Sac de Riz 25kg'
-);
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS users(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),name VARCHAR(120) NOT NULL,email VARCHAR(180) UNIQUE NOT NULL,password_hash TEXT NOT NULL,role VARCHAR(20) NOT NULL DEFAULT 'EMPLOYEE' CHECK(role IN('ADMIN','MANAGER','EMPLOYEE')),active BOOLEAN DEFAULT true,last_login TIMESTAMPTZ,created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS categories(id SERIAL PRIMARY KEY,name VARCHAR(100) UNIQUE NOT NULL,description TEXT DEFAULT '',created_at TIMESTAMPTZ DEFAULT now(),updated_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS products(id SERIAL PRIMARY KEY,name VARCHAR(180) NOT NULL,sku VARCHAR(80) UNIQUE NOT NULL,category_id INT REFERENCES categories(id) ON DELETE SET NULL,purchase_price NUMERIC(14,2) NOT NULL CHECK(purchase_price>=0),selling_price NUMERIC(14,2) NOT NULL CHECK(selling_price>=0),stock_quantity INT NOT NULL DEFAULT 0 CHECK(stock_quantity>=0),min_stock INT NOT NULL DEFAULT 5 CHECK(min_stock>=0),unit VARCHAR(40) DEFAULT 'pièce',created_at TIMESTAMPTZ DEFAULT now(),updated_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS stock_movements(id BIGSERIAL PRIMARY KEY,product_id INT NOT NULL REFERENCES products(id),user_id UUID REFERENCES users(id) ON DELETE SET NULL,type VARCHAR(10) CHECK(type IN('IN','OUT')),quantity INT CHECK(quantity>0),note TEXT DEFAULT '',created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS sales(id BIGSERIAL PRIMARY KEY,user_id UUID REFERENCES users(id) ON DELETE SET NULL,customer_name VARCHAR(160) DEFAULT 'Client comptoir',payment_method VARCHAR(30) DEFAULT 'CASH',subtotal NUMERIC(14,2) NOT NULL,discount NUMERIC(14,2) DEFAULT 0,total NUMERIC(14,2) NOT NULL,profit NUMERIC(14,2) DEFAULT 0,created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS sale_items(id BIGSERIAL PRIMARY KEY,sale_id BIGINT REFERENCES sales(id) ON DELETE CASCADE,product_id INT REFERENCES products(id),quantity INT CHECK(quantity>0),unit_price NUMERIC(14,2),cost_price NUMERIC(14,2));
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);CREATE INDEX IF NOT EXISTS idx_sales_created ON sales(created_at DESC);
+INSERT INTO users(name,email,password_hash,role) VALUES('KAMS Admin','admin@kamsstock.com','$2b$10$0H5LqzGf4pPqJ7p5JvYV4u7yY8Gm4eJqgPqk7sV0aJ5K9kG2lQ5jK','ADMIN') ON CONFLICT(email) DO NOTHING;
+INSERT INTO categories(name,description) VALUES('Électronique','Téléphones et accessoires'),('Alimentation','Produits alimentaires'),('Mode','Vêtements et accessoires') ON CONFLICT(name) DO NOTHING;
+INSERT INTO products(name,sku,category_id,purchase_price,selling_price,stock_quantity,min_stock,unit) SELECT 'Smartphone KAMS X1','KMS-X1',id,85000,110000,18,5,'pièce' FROM categories WHERE name='Électronique' AND NOT EXISTS(SELECT 1 FROM products WHERE sku='KMS-X1');
+INSERT INTO products(name,sku,category_id,purchase_price,selling_price,stock_quantity,min_stock,unit) SELECT 'Casque Bluetooth Pro','KMS-CASQUE',id,12000,20000,7,8,'pièce' FROM categories WHERE name='Électronique' AND NOT EXISTS(SELECT 1 FROM products WHERE sku='KMS-CASQUE');
+INSERT INTO products(name,sku,category_id,purchase_price,selling_price,stock_quantity,min_stock,unit) SELECT 'Riz 25kg','KMS-RIZ25',id,11000,14000,42,10,'sac' FROM categories WHERE name='Alimentation' AND NOT EXISTS(SELECT 1 FROM products WHERE sku='KMS-RIZ25');
