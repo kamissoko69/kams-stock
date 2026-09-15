@@ -1,14 +1,21 @@
 const API_URL = "/api";
 
 async function request(url, options = {}) {
-
   const response = await fetch(`${API_URL}${url}`, {
     headers: {
       "Content-Type": "application/json",
+      "Accept": "application/json",
       ...(options.headers || {})
     },
     ...options
   });
+
+  const contentType = response.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    const text = await response.text();
+    console.error("Réponse non-JSON reçue du serveur:", text);
+    throw new Error("Le serveur a renvoyé du HTML au lieu de JSON. Vérifie les routes backend.");
+  }
 
   const data = await response.json();
 
@@ -18,7 +25,6 @@ async function request(url, options = {}) {
 
   return data;
 }
-
 
 async function fetchStats() {
   return request("/dashboard/stats");
