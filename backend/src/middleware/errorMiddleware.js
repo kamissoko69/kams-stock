@@ -1,2 +1,0 @@
-export function notFound(req,res){res.status(404).json({message:"Route introuvable"})}
-export function errorHandler(e,req,res,next){console.error(e);if(e.code==="23505")return res.status(409).json({message:"Cette donnée existe déjà."});res.status(e.status||500).json({message:e.message||"Erreur serveur."})}

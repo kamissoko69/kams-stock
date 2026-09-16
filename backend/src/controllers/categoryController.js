@@ -1,5 +1,0 @@
-import {query} from "../config/database.js";
-export async function listCategories(req,res){const{rows}=await query("select c.*,count(p.id)::int product_count from categories c left join products p on p.category_id=c.id group by c.id order by c.name");res.json(rows)}
-export async function createCategory(req,res){const{name,description=""}=req.body;const{rows}=await query("insert into categories(name,description) values($1,$2) returning *",[name,description]);res.status(201).json(rows[0])}
-export async function updateCategory(req,res){const{name,description=""}=req.body;const{rows}=await query("update categories set name=$1,description=$2,updated_at=now() where id=$3 returning *",[name,description,req.params.id]);res.json(rows[0])}
-export async function deleteCategory(req,res){await query("delete from categories where id=$1",[req.params.id]);res.json({message:"Catégorie supprimée."})}

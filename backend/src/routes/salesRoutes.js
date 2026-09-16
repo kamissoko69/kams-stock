@@ -1,1 +1,0 @@
-import{Router}from"express";import{auth}from"../middleware/authMiddleware.js";import*as c from"../controllers/salesController.js";const r=Router();r.use(auth);r.get("/",c.listSales);r.post("/",c.createSale);export default r;
