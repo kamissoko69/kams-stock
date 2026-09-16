@@ -1,0 +1,4 @@
+import bcrypt from "bcryptjs";import jwt from "jsonwebtoken";import {query} from "../config/database.js";
+const secret=process.env.JWT_SECRET||"change-me";
+export async function login(req,res){const{email,password}=req.body;if(!email||!password)return res.status(400).json({message:"Email et mot de passe requis."});const{rows}=await query("select id,name,email,password_hash,role,active from users where lower(email)=lower($1)",[email]);const u=rows[0];if(!u||!u.active||!(await bcrypt.compare(password,u.password_hash)))return res.status(401).json({message:"Identifiants incorrects."});await query("update users set last_login=now() where id=$1",[u.id]);res.json({token:jwt.sign({id:u.id,name:u.name,email:u.email,role:u.role},secret,{expiresIn:"12h"}),user:{id:u.id,name:u.name,email:u.email,role:u.role}})}
+export async function me(req,res){const{rows}=await query("select id,name,email,role,active,last_login from users where id=$1",[req.user.id]);res.json(rows[0])}
